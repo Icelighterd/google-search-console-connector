@@ -13,6 +13,12 @@ from st_aggrid import AgGrid
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
+from oauth2client import file
+from oauth2client import client
+from oauth2client import tools
+import argparse
+import httplib2
+import requests
 
 # all other imports
 import os
@@ -33,7 +39,7 @@ st.set_page_config(
 ###############################################################################
 
 # row limit
-RowCap = 25000
+RowCap = 125000
 
 ###############################################################################
 
@@ -66,22 +72,8 @@ with tab1:
     with st.sidebar.form(key="my_form"):
 
         st.markdown("")
-
-        mt = Elements()
-
-        mt.button(
-            "Sign-in with Google",
-            target="_blank",
-            size="large",
-            variant="contained",
-            start_icon=mt.icons.exit_to_app,
-            onclick="none",
-            style={"color": "#FFFFFF", "background": "#FF4B4B"},
-            href="https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=686079794781-0bt8ot3ie81iii7i17far5vj4s0p20t7.apps.googleusercontent.com&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fwebmasters.readonly&state=vryYlMrqKikWGlFVwqhnMpfqr1HMiq&prompt=consent&access_type=offline",
-        )
-
-        mt.show(key="687")
-
+        
+        
         credentials = {
             "installed": {
                 "client_id": clientId,
@@ -101,11 +93,13 @@ with tab1:
         auth_url, _ = flow.authorization_url(prompt="consent")
 
         code = st.text_input(
-            "Google Oauth token",
+            "Proceed to click the Access GSC API button to initialize the service",
             key="my_token_input",
-            help="Sign in to your account via Google OAuth, then paste your OAuth token in the field below.",
+            help="Proceed to click the Access GSC API button to initialize the service",
             type="password",
+            disabled=True
         )
+        
 
         submit_button = st.form_submit_button(
             label="Access GSC API", on_click=charly_form_callback
@@ -118,7 +112,7 @@ with tab1:
     st.sidebar.write("")
 
     st.sidebar.caption(
-        "Made in 🎈 [Streamlit](https://www.streamlit.io/), by [Charly Wargnier](https://www.charlywargnier.com/)."
+        "Modified by Jose Arenas"
     )
 
     try:
@@ -376,13 +370,31 @@ with tab1:
 
             @st.experimental_singleton
             def get_account_site_list_and_webproperty(token):
-                flow.fetch_token(code=token)
-                credentials = flow.credentials
+                #flow.fetch_token(code=token)
+                #credentials = flow.credentials
+                SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
+                
+                parser = argparse.ArgumentParser(
+                    formatter_class=argparse.RawDescriptionHelpFormatter,
+                    parents=[tools.argparser])
+                flags = parser.parse_args([])
+                
+                flow = client.OAuth2WebServerFlow(client_id='1044154810418-d7t27aqhu4thts78a2pvehu5o3248upa.apps.googleusercontent.com',
+                           client_secret='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',
+                           scope=SCOPES)
+                storage = file.Storage('authorizedcreds.dat')
+                credentials = storage.get()
+                if credentials is None or credentials.invalid:
+                    credentials = tools.run_flow(flow, storage, flags)
+                
+                http = httplib2.Http()                                      # Creates an HTTP client object to make the http request
+                http = credentials.authorize(http=http)   
                 service = discovery.build(
-                    serviceName="webmasters",
-                    version="v3",
-                    credentials=credentials,
-                    cache_discovery=False,
+                    serviceName="searchconsole",
+                    version="v1",
+                    http=http
+                    #credentials=credentials,
+                    #cache_discovery=False,
                 )
 
                 account = searchconsole.account.Account(service, credentials)
