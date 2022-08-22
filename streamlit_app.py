@@ -717,7 +717,7 @@ with tab1:
                 webproperty = account[webpropertiesNEW]
 
                 df = get_search_console_data(webproperty)
-
+                print(df)
                 if df.empty:
                     st.warning(
                         "🚨 There's no data for your selection, please refine your search with different criteria"
